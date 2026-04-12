@@ -39,13 +39,13 @@ class SessionPool:
         return self._sessions[session_key]
 
     async def close_all(self) -> None:
-        for key, session in self._sessions.items():
+        sessions, self._sessions = self._sessions, {}
+        for key, session in list(sessions.items()):
             try:
                 await session.close()
                 logger.debug("Closed session: %s", key)
             except Exception:
                 logger.debug("Failed to close session: %s", key, exc_info=True)
-        self._sessions.clear()
 
     @property
     def size(self) -> int:
@@ -70,5 +70,5 @@ class SessionPool:
     ) -> Optional[dict]:
         if not proxy_headers:
             return None
-        header_list = [f"{k}: {v}" for k, v in proxy_headers.items()]
+        header_list = [f"{k}: {v}".encode() for k, v in proxy_headers.items()]
         return {CurlOpt.PROXYHEADER: header_list}
