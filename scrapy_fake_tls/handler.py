@@ -31,6 +31,9 @@ class AsyncCurlCffiDownloadHandler(BaseDownloadHandler):
     lazy = False
 
     def __init__(self, settings, crawler=None) -> None:
+
+        super().__init__(crawler=crawler)
+
         self._settings = settings
         self._crawler = crawler
         self._default_impersonate: str = settings.get(
@@ -56,10 +59,10 @@ class AsyncCurlCffiDownloadHandler(BaseDownloadHandler):
         crawler.signals.connect(handler.close, signals.engine_stopped)
         return handler
 
-    def download_request(
-        self, request: Request, spider=None,
+    async def download_request(
+        self, request: Request,
     ) -> defer.Deferred:
-        return deferred_from_coro(self._download(request))
+        return await self._download(request)
 
     async def close(self) -> None:
         logger.debug(
