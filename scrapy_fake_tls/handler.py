@@ -7,6 +7,8 @@ from urllib.parse import urlparse, urlunparse
 
 from scrapy import signals
 from scrapy.http import HtmlResponse, Request
+from scrapy.http.headers import Headers
+from scrapy.responsetypes import responsetypes
 from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.reactor import verify_installed_reactor
 from twisted.internet import defer
@@ -103,19 +105,24 @@ class AsyncCurlCffiDownloadHandler(BaseDownloadHandler):
             headers=headers,
             data=request.body or None,
             timeout=timeout,
-            allow_redirects=not request.meta.get("dont_redirect", False),
+            allow_redirects=False,
         )
 
-        resp_headers = dict(response.headers)
-        resp_headers = {
-            k: v for k, v in resp_headers.items()
-            if (k.lower() if isinstance(k, str) else k.lower()) not in ("content-encoding", b"content-encoding")
-        }
+        resp_headers = Headers(response.headers.multi_items())
+        resp_headers.pop("Content-Encoding", None)
 
-        return HtmlResponse(
+        respcls = responsetypes.from_args(
+            headers=resp_headers,
+            url=response.url,
+            body=response.content,
+        )
+
+        resp = respcls(
             url=response.url,
             status=response.status_code,
             headers=resp_headers,
             body=response.content,
             request=request,
         )
+
+        return resp
